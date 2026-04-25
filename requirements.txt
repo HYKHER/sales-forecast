@@ -1,0 +1,12 @@
+# RetailIQ Flask Requirements — PostgreSQL Edition
+flask>=2.3.0
+flask-login>=0.6.2
+flask-sqlalchemy>=3.0.0
+werkzeug>=2.3.0
+numpy>=1.23.0
+scikit-learn>=1.2.0
+joblib>=1.2.0
+pandas>=1.5.0
+python-dateutil>=2.8.0
+psycopg2-binary>=2.9.0
+gunicorn>=21.2.0

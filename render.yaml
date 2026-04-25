@@ -2,14 +2,14 @@ services:
   - type: web
     name: retailiq-sales-forecast
     runtime: python
-    # We build from the very root to ensure the ML models are accessible
-    buildCommand: pip install -r sales-forecast/sales_forecasting/flask_app/requirements_flask.txt
+    # Build from the root using the newly created requirements.txt
+    buildCommand: pip install -r requirements.txt
     # Start the app from the specific subdirectory
     startCommand: gunicorn --chdir sales-forecast/sales_forecasting/flask_app app:app
     envVars:
       - key: DATABASE_URL
-        sync: false # You will paste your Neon database URL in the Render dashboard
+        sync: false
       - key: PYTHON_VERSION
-        value: 3.10.0
+        value: 3.10.12
       - key: SECRET_KEY
         generateValue: true
