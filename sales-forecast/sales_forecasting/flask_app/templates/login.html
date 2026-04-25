@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RetailIQ — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+<div class="landing-wrapper">
+  <div class="landing-card">
+    <div class="landing-logo">
+      <div class="landing-logo-icon">📊</div>
+      <div class="landing-logo-text">Retail<span>IQ</span></div>
+    </div>
+    <h1 class="landing-title">Welcome back</h1>
+    <p class="landing-sub">Sign in to your MySQL-powered dashboard</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <ul class="flash-list">
+        {% for cat, msg in messages %}
+        <li class="flash-msg {{ cat }}">{{ msg }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    {% endwith %}
+    <div class="form-section">
+      <form method="POST" action="{{ url_for('auth.login') }}" style="display:flex;flex-direction:column;gap:16px;">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" class="input" placeholder="you@example.com" required autofocus />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" class="input" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-full">Sign In</button>
+      </form>
+    </div>
+    <div class="landing-footer">
+      Don't have an account? <a href="{{ url_for('auth.signup') }}">Create one</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

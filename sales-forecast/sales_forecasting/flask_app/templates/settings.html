@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Account <span class="accent">Settings</span></h1>
+      <p class="page-subtitle">Manage your account and database configuration.</p>
+    </div>
+  </div>
+</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title mb-16">Account Info</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Full Name</span>
+        <span style="font-size:13px;font-weight:600;">{{ current_user.full_name }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Email</span>
+        <span style="font-size:13px;font-weight:500;font-family:var(--font-mono);">{{ current_user.email }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Plan</span>
+        <span class="badge badge-blue">{{ current_user.plan | upper }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Daily Limit</span>
+        <span style="font-size:13px;font-weight:600;">{{ current_user.daily_limit }} predictions</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Member Since</span>
+        <span style="font-size:13px;">{{ current_user.created_at.strftime('%d %B %Y') }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title mb-16">Database Status</div>
+    <div style="display:flex;flex-direction:column;gap:12px;" id="db-status-container">
+      <div class="alert alert-info">Checking MySQL connection...</div>
+    </div>
+    <button class="btn btn-ghost btn-sm mt-16" onclick="checkDbHealth()">↻ Check Connection</button>
+  </div>
+</div>
+<script>
+async function checkDbHealth() {
+  const container = document.getElementById('db-status-container');
+  try {
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    container.innerHTML = `
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Database Type</span>
+        <span class="badge badge-emerald">${data.db_type}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Connection</span>
+        <span class="badge ${data.database === 'connected' ? 'badge-emerald' : 'badge-rose'}">${data.database}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">ML Model</span>
+        <span style="font-size:13px;font-weight:500;">${data.model}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);border:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-secondary);">Feature Count</span>
+        <span style="font-size:13px;font-family:var(--font-mono);color:var(--blue-bright);">${data.features}</span>
+      </div>`;
+  } catch(e) {
+    container.innerHTML = '<div class="alert alert-error">Cannot reach server.</div>';
+  }
+}
+checkDbHealth();
+</script>
+{% endblock %}

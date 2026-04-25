@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}6-Month Forecast{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">6-Month <span class="accent">Forecast</span></h1>
+      <p class="page-subtitle">Multi-month demand projections — each month logged to MySQL.</p>
+    </div>
+  </div>
+</div>
+<div class="grid-main">
+  <div class="card">
+    <div class="card-title mb-16">Forecast Parameters</div>
+    <div class="form-section">
+      <div class="form-row">
+        <div class="field"><label>Category</label><select id="f6-category" class="select"><option>Furniture</option><option>Clothing</option><option>Electronics</option><option>Groceries</option><option>Toys</option></select></div>
+        <div class="field"><label>Region</label><select id="f6-region" class="select"><option>East</option><option>North</option><option>South</option><option>West</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Weather</label><select id="f6-weather" class="select"><option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Snowy</option></select></div>
+        <div class="field"><label>Seasonality</label><select id="f6-seasonality" class="select"><option>Winter</option><option>Spring</option><option>Summer</option><option>Autumn</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Price (₹)</label><input type="number" id="f6-price" class="input" value="50"/></div>
+        <div class="field"><label>Discount (%)</label><input type="number" id="f6-discount" class="input" value="10"/></div>
+      </div>
+      <div class="field">
+        <label>Months to Forecast</label>
+        <select id="f6-months" class="select">
+          <option value="2">2 Months</option><option value="3">3 Months</option>
+          <option value="4">4 Months</option><option value="5">5 Months</option>
+          <option value="6" selected>6 Months</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-lg btn-full mt-24" onclick="runForecast6m()" id="f6-btn">Generate Multi-Month Forecast</button>
+  </div>
+  <div class="card">
+    <div class="card-title mb-16">Forecast Timeline</div>
+    <div id="f6-empty" class="empty-state"><div class="empty-state-icon">📆</div><div class="empty-state-title">Configure and generate</div></div>
+    <div id="f6-loading" style="display:none;" class="empty-state"><div class="empty-state-title">Computing months...</div></div>
+    <div id="f6-output" style="display:none;"></div>
+    <div id="f6-chart-wrap" style="display:none;margin-top:20px;">
+      <div class="chart-container" style="height:180px;"><canvas id="f6-chart"></canvas></div>
+    </div>
+    <div id="f6-error" style="display:none;" class="mt-16"></div>
+  </div>
+</div>
+<script>
+let f6ChartInst = null;
+async function runForecast6m() {
+  const btn = document.getElementById('f6-btn');
+  btn.disabled=true; btn.textContent='Forecasting...';
+  document.getElementById('f6-empty').style.display='none';
+  document.getElementById('f6-output').style.display='none';
+  document.getElementById('f6-error').style.display='none';
+  document.getElementById('f6-chart-wrap').style.display='none';
+  document.getElementById('f6-loading').style.display='block';
+  const payload = {
+    category: document.getElementById('f6-category').value,
+    region: document.getElementById('f6-region').value,
+    weather: document.getElementById('f6-weather').value,
+    seasonality: document.getElementById('f6-seasonality').value,
+    price: parseFloat(document.getElementById('f6-price').value),
+    discount: parseFloat(document.getElementById('f6-discount').value),
+    months: parseInt(document.getElementById('f6-months').value)
+  };
+  try {
+    const res = await fetch('/api/forecast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (data.success) {
+      const maxPred = Math.max(...data.forecasts.map(f=>f.prediction));
+      const rows = data.forecasts.map(f=>`
+        <div class="forecast-row">
+          <div class="forecast-month">${f.month}</div>
+          <div class="forecast-bar-wrap"><div class="forecast-bar" style="width:${maxPred > 0 ? (f.prediction/maxPred*100) : 0}%"></div></div>
+          <div class="forecast-value">${f.prediction} units</div>
+        </div>`).join('');
+      document.getElementById('f6-output').innerHTML = rows + `<div class="alert alert-success mt-16" style="font-size:12px;">✓ All ${data.forecasts.length} months logged to MySQL</div>`;
+      document.getElementById('f6-output').style.display='block';
+      // Chart
+      if (f6ChartInst) f6ChartInst.destroy();
+      const ctx = document.getElementById('f6-chart').getContext('2d');
+      f6ChartInst = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.forecasts.map(f=>f.month),
+          datasets: [{
+            label:'Predicted Units', data: data.forecasts.map(f=>f.prediction),
+            borderColor:'#3B82F6', backgroundColor:'rgba(59,130,246,0.08)',
+            borderWidth:2, pointBackgroundColor:'#3B82F6',
+            fill:true, tension:0.4
+          },{
+            label:'High Bound', data: data.forecasts.map(f=>f.confidence_high),
+            borderColor:'rgba(16,185,129,0.4)', borderWidth:1, borderDash:[4,4],
+            pointRadius:0, fill:false
+          },{
+            label:'Low Bound', data: data.forecasts.map(f=>f.confidence_low),
+            borderColor:'rgba(244,63,94,0.4)', borderWidth:1, borderDash:[4,4],
+            pointRadius:0, fill:false
+          }]
+        },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#94A3B8',font:{family:'DM Sans'},boxWidth:10}}},
+          scales:{
+            x:{grid:{color:'rgba(59,130,246,0.06)'},ticks:{color:'#94A3B8'}},
+            y:{grid:{color:'rgba(59,130,246,0.06)'},ticks:{color:'#94A3B8'}}
+          }
+        }
+      });
+      document.getElementById('f6-chart-wrap').style.display='block';
+      showToast('6-Month forecast saved to MySQL','success');
+    } else {
+      const err=document.getElementById('f6-error');
+      err.className='alert alert-error'; err.textContent=data.error||'Failed.'; err.style.display='block';
+    }
+  } catch(e) {
+    const err=document.getElementById('f6-error');
+    err.className='alert alert-error'; err.textContent='Server error.'; err.style.display='block';
+  } finally {
+    document.getElementById('f6-loading').style.display='none';
+    btn.disabled=false; btn.textContent='Generate Multi-Month Forecast';
+  }
+}
+</script>
+{% endblock %}

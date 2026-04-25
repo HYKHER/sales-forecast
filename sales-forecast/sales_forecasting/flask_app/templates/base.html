@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RetailIQ — {% block title %}Dashboard{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+<nav class="main-nav">
+  <a href="{{ url_for('landing') }}" class="nav-brand">
+    <div class="nav-brand-icon">📊</div>
+    <span class="nav-brand-text">Retail<span>IQ</span></span>
+  </a>
+
+  <div class="nav-center">
+    <a href="{{ url_for('dashboard') }}"  class="nav-link {% if request.path == '/dashboard' %}active{% endif %}">Dashboard</a>
+    <a href="{{ url_for('data_entry') }}" class="nav-link {% if request.path == '/data-entry' %}active{% endif %}">📥 Data Entry</a>
+    <a href="{{ url_for('predict_page') }}" class="nav-link {% if request.path == '/predict' %}active{% endif %}">Predict</a>
+    <a href="{{ url_for('forecast_1m') }}" class="nav-link {% if '/forecast/1m' in request.path %}active{% endif %}">1M Forecast</a>
+    <a href="{{ url_for('forecast_6m') }}" class="nav-link {% if '/forecast/6m' in request.path %}active{% endif %}">6M Forecast</a>
+    <a href="{{ url_for('reports') }}"   class="nav-link {% if request.path == '/reports' %}active{% endif %}">Reports</a>
+    <a href="{{ url_for('settings') }}"  class="nav-link {% if request.path == '/settings' %}active{% endif %}">Settings</a>
+  </div>
+
+  <div class="nav-right">
+    <div class="nav-user">
+      <div class="nav-avatar">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</div>
+      <div>
+        <div class="nav-username">{{ current_user.first_name }}</div>
+      </div>
+      <span class="nav-plan-badge">{{ current_user.plan | upper }}</span>
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="btn-logout">Sign Out</a>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  {% block content %}{% endblock %}
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = (type === 'success' ? '✓ ' : '✗ ') + msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

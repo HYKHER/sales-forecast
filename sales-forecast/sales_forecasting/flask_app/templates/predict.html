@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Predict{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Demand <span class="accent">Predictor</span></h1>
+      <p class="page-subtitle">Get precise one-day unit demand predictions — results are logged to MySQL.</p>
+    </div>
+    <div class="page-actions">
+      <span class="status-pill live"><span class="dot"></span>{{ current_user.remaining_today }} remaining</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid-main">
+  <!-- Form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Prediction Parameters</div>
+        <div class="card-subtitle">Set your scenario inputs below</div>
+      </div>
+      <span class="badge badge-violet">ML Model</span>
+    </div>
+
+    <div class="form-section">
+      <div class="form-row">
+        <div class="field">
+          <label>Target Date</label>
+          <input type="date" id="p-date" class="input" />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="p-category" class="select">
+            <option>Furniture</option><option>Clothing</option>
+            <option>Electronics</option><option>Groceries</option><option>Toys</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Region</label>
+          <select id="p-region" class="select">
+            <option>East</option><option>North</option><option>South</option><option>West</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Weather</label>
+          <select id="p-weather" class="select">
+            <option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Snowy</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Seasonality</label>
+          <select id="p-seasonality" class="select">
+            <option>Winter</option><option>Spring</option><option>Summer</option><option>Autumn</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Inventory Level</label>
+          <input type="number" id="p-inventory" class="input" value="300" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Price (₹)</label>
+          <input type="number" id="p-price" class="input" value="50" step="0.01" />
+        </div>
+        <div class="field">
+          <label>Discount (%)</label>
+          <input type="number" id="p-discount" class="input" value="10" min="0" max="100" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Holiday / Promotion</label>
+        <div class="toggle-row">
+          <span class="toggle-label-text">Is there an active holiday or promotion?</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="p-holiday"/>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-lg btn-full mt-24" onclick="runPrediction()" id="predict-btn">
+      Run Prediction
+    </button>
+  </div>
+
+  <!-- Result -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Prediction Output</div>
+        <div class="card-subtitle">Results logged to MySQL prediction_logs table</div>
+      </div>
+      <span class="badge badge-blue" id="result-badge" style="display:none;">Result</span>
+    </div>
+
+    <div id="result-empty" class="empty-state" style="margin-top:40px;">
+      <div class="empty-state-icon">🔮</div>
+      <div class="empty-state-title">Awaiting Input</div>
+      <div class="empty-state-text">Configure parameters and run prediction.</div>
+    </div>
+
+    <div id="result-loading" style="display:none;" class="empty-state" style="margin-top:40px;">
+      <div class="empty-state-icon" style="animation:spin 1.5s linear infinite;display:inline-block;">⚙️</div>
+      <div class="empty-state-title">Processing...</div>
+      <div class="empty-state-text">Consulting ML model</div>
+    </div>
+
+    <div id="result-output" style="display:none;">
+      <div class="result-hero">
+        <div class="result-value" id="res-value">0</div>
+        <div class="result-unit">units predicted</div>
+        <div class="result-range" id="res-range">— ± 68.83 MAE —</div>
+        <div class="confidence-bar mt-16">
+          <div class="confidence-fill" id="conf-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="result-meta">
+        <div class="result-meta-item">
+          <div class="result-meta-label">Category</div>
+          <div class="result-meta-value" id="res-cat">—</div>
+        </div>
+        <div class="result-meta-item">
+          <div class="result-meta-label">Region</div>
+          <div class="result-meta-value" id="res-region">—</div>
+        </div>
+        <div class="result-meta-item">
+          <div class="result-meta-label">Low Bound</div>
+          <div class="result-meta-value text-blue" id="res-low">—</div>
+        </div>
+        <div class="result-meta-item">
+          <div class="result-meta-label">High Bound</div>
+          <div class="result-meta-value text-emerald" id="res-high">—</div>
+        </div>
+      </div>
+      <div class="alert alert-success mt-16" style="font-size:12px;">
+        ✓ Prediction logged to <code style="font-family:var(--font-mono);">prediction_logs</code> table in MySQL
+      </div>
+    </div>
+
+    <div id="result-error" style="display:none;" class="mt-16"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('p-date').value = new Date().toISOString().split('T')[0];
+});
+
+async function runPrediction() {
+  const btn = document.getElementById('predict-btn');
+  btn.disabled = true; btn.textContent = 'Processing...'; btn.classList.add('btn-loading');
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-output').style.display = 'none';
+  document.getElementById('result-error').style.display = 'none';
+  document.getElementById('result-loading').style.display = 'block';
+
+  const payload = {
+    date: document.getElementById('p-date').value,
+    category: document.getElementById('p-category').value,
+    region: document.getElementById('p-region').value,
+    weather: document.getElementById('p-weather').value,
+    seasonality: document.getElementById('p-seasonality').value,
+    price: parseFloat(document.getElementById('p-price').value),
+    discount: parseFloat(document.getElementById('p-discount').value),
+    inventory_level: parseFloat(document.getElementById('p-inventory').value),
+    holiday_promotion: document.getElementById('p-holiday').checked ? 1 : 0,
+  };
+
+  try {
+    const res = await fetch('/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('res-value').textContent = data.prediction;
+      document.getElementById('res-range').textContent = `Range: ${data.confidence_low} – ${data.confidence_high} units`;
+      document.getElementById('res-cat').textContent = data.category;
+      document.getElementById('res-region').textContent = data.region;
+      document.getElementById('res-low').textContent = data.confidence_low;
+      document.getElementById('res-high').textContent = data.confidence_high;
+      document.getElementById('conf-fill').style.width = Math.min(100, (data.prediction / 500) * 100) + '%';
+      document.getElementById('result-badge').style.display = 'inline-flex';
+      document.getElementById('result-output').style.display = 'block';
+      showToast('Prediction saved to MySQL', 'success');
+    } else {
+      const err = document.getElementById('result-error');
+      err.className = 'alert alert-error mt-16';
+      err.textContent = data.error || 'Prediction failed.';
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    const err = document.getElementById('result-error');
+    err.className = 'alert alert-error mt-16';
+    err.textContent = 'Server connection error.';
+    err.style.display = 'block';
+  } finally {
+    document.getElementById('result-loading').style.display = 'none';
+    btn.disabled = false; btn.textContent = 'Run Prediction'; btn.classList.remove('btn-loading');
+  }
+}
+</script>
+{% endblock %}

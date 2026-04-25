@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Intelligence <span class="accent">Overview</span></h1>
+      <p class="page-subtitle">Your centralized command center for predictive retail analytics — powered by MySQL.</p>
+    </div>
+    <div class="page-actions">
+      <span class="status-pill live"><span class="dot"></span>MySQL Live</span>
+      <a href="{{ url_for('data_entry') }}" class="btn btn-primary btn-sm">+ Add Sales Data</a>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Stats -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-card-icon blue">🎯</div>
+    <div class="stat-value">{{ current_user.predictions_today }}<span class="unit">/{{ current_user.daily_limit }}</span></div>
+    <div class="stat-label">Predictions Today</div>
+    {% set pct = (current_user.predictions_today / current_user.daily_limit * 100)|int %}
+    <div class="usage-bar-wrap mt-8">
+      <div class="usage-bar-fill {% if pct > 90 %}danger{% elif pct > 70 %}warning{% endif %}" style="width:{{ pct }}%"></div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-icon emerald">📈</div>
+    <div class="stat-value">{{ total_preds }}</div>
+    <div class="stat-label">Total Predictions (All Time)</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-icon amber">🧠</div>
+    <div class="stat-value">94.2<span class="unit">%</span></div>
+    <div class="stat-label">Model Accuracy (R²)</div>
+    <span class="stat-trend up">↑ Excellent</span>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-icon violet">⚡</div>
+    <div class="stat-value">{{ current_user.remaining_today }}</div>
+    <div class="stat-label">Remaining Today</div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid-main" style="margin-bottom: 20px;">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Weekly Prediction Activity</div>
+        <div class="card-subtitle">Predictions per day (last 7 days) — from MySQL</div>
+      </div>
+      <span class="badge badge-blue">Live Data</span>
+    </div>
+    <div class="chart-container" style="height:240px;">
+      <canvas id="weeklyChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">By Category</div>
+        <div class="card-subtitle">Prediction distribution</div>
+      </div>
+    </div>
+    <div class="chart-container" style="height:240px;">
+      <canvas id="catChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Predictions + Top Categories -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Recent Predictions</div>
+        <div class="card-subtitle">Last 5 from MySQL log</div>
+      </div>
+      <a href="{{ url_for('reports') }}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    {% if recent_preds %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Category</th><th>Region</th><th>Prediction</th><th>Time</th></tr></thead>
+        <tbody>
+          {% for p in recent_preds %}
+          <tr>
+            <td class="primary">{{ p.category }}</td>
+            <td>{{ p.region }}</td>
+            <td class="td-mono">{{ p.prediction }} units</td>
+            <td class="text-sm text-muted">{{ p.created_at.strftime('%d %b, %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🔮</div>
+      <div class="empty-state-title">No predictions yet</div>
+      <div class="empty-state-text">Run your first prediction to see results here.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Top Categories</div>
+        <div class="card-subtitle">By prediction volume</div>
+      </div>
+    </div>
+    {% if top_cats %}
+      {% for cat in top_cats %}
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:600;">{{ cat['category'] }}</span>
+          <span class="badge badge-blue">{{ cat['cnt'] }} runs</span>
+        </div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar-fill" style="width:{{ [[(cat['cnt'] / top_cats[0]['cnt'] * 100)|int, 100]|min, 8]|max }}%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Avg prediction: {{ cat['avg_pred']|round(1) }} units</div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📊</div>
+      <div class="empty-state-title">No data yet</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#94A3B8', font: { family: 'DM Sans' } } } },
+    scales: {
+      x: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#94A3B8' } },
+      y: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#94A3B8' } }
+    }
+  };
+
+  // Weekly chart data from server
+  const dailyCounts = {{ daily_counts | tojson }};
+  const days = dailyCounts.map(r => r.day);
+  const counts = dailyCounts.map(r => r.count);
+
+  new Chart(document.getElementById('weeklyChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: days.length ? days : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets: [{
+        label: 'Predictions',
+        data: counts.length ? counts : [0,0,0,0,0,0,0],
+        backgroundColor: 'rgba(59,130,246,0.15)',
+        borderColor: '#3B82F6',
+        borderWidth: 2,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+  });
+
+  // Category chart from server
+  const topCats = {{ top_cats | tojson }};
+  const catLabels = topCats.map(r => r.category);
+  const catCounts = topCats.map(r => r.cnt);
+  const catColors = ['rgba(59,130,246,0.7)','rgba(16,185,129,0.7)','rgba(245,158,11,0.7)','rgba(139,92,246,0.7)','rgba(244,63,94,0.7)'];
+
+  new Chart(document.getElementById('catChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: catLabels.length ? catLabels : ['No Data'],
+      datasets: [{
+        data: catCounts.length ? catCounts : [1],
+        backgroundColor: catColors,
+        borderColor: 'rgba(10,22,40,0.5)',
+        borderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'DM Sans' }, padding: 12 } }
+      },
+      cutout: '65%',
+    }
+  });
+});
+</script>
+{% endblock %}

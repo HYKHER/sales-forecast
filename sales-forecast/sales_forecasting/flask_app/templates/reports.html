@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Prediction <span class="accent">Reports</span></h1>
+      <p class="page-subtitle">Full audit log of all predictions — queried live from MySQL.</p>
+    </div>
+    <div class="page-actions">
+      <span class="status-pill live"><span class="dot"></span>{{ logs|length }} records</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-left">
+      <div class="card-title">Prediction Log</div>
+      <div class="card-subtitle">SELECT * FROM prediction_logs — last 100 rows</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <input type="text" id="search-input" class="input" placeholder="Filter by category or region..." style="width:220px;padding:7px 12px;" oninput="filterTable()" />
+    </div>
+  </div>
+
+  {% if logs %}
+  <div class="table-wrap">
+    <table id="logs-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Category</th>
+          <th>Region</th>
+          <th>Prediction</th>
+          <th>Target Date</th>
+          <th>Logged At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="td-mono">#{{ log.id }}</td>
+          <td class="primary">{{ log.category }}</td>
+          <td>
+            {% if log.region == 'North' %}<span class="badge badge-blue">{{ log.region }}</span>
+            {% elif log.region == 'South' %}<span class="badge badge-emerald">{{ log.region }}</span>
+            {% elif log.region == 'East' %}<span class="badge badge-amber">{{ log.region }}</span>
+            {% else %}<span class="badge badge-violet">{{ log.region }}</span>{% endif %}
+          </td>
+          <td class="td-mono">{{ log.prediction }} <span style="color:var(--text-muted);font-size:11px;">units</span></td>
+          <td>{{ log.prediction_date or '—' }}</td>
+          <td class="text-sm text-muted">{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">📊</div>
+    <div class="empty-state-title">No predictions yet</div>
+    <div class="empty-state-text">Run predictions to see them logged here.</div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function filterTable() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  const rows = document.querySelectorAll('#logs-table tbody tr');
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

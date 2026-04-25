@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}1-Month Forecast{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">1-Month <span class="accent">Forecast</span></h1>
+      <p class="page-subtitle">Predict demand for the next month. Results saved to MySQL.</p>
+    </div>
+  </div>
+</div>
+<div class="grid-main">
+  <div class="card">
+    <div class="card-title mb-16">Forecast Parameters</div>
+    <div class="form-section">
+      <div class="form-row">
+        <div class="field"><label>Category</label><select id="f1-category" class="select"><option>Furniture</option><option>Clothing</option><option>Electronics</option><option>Groceries</option><option>Toys</option></select></div>
+        <div class="field"><label>Region</label><select id="f1-region" class="select"><option>East</option><option>North</option><option>South</option><option>West</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Weather</label><select id="f1-weather" class="select"><option>Sunny</option><option>Cloudy</option><option>Rainy</option><option>Snowy</option></select></div>
+        <div class="field"><label>Seasonality</label><select id="f1-seasonality" class="select"><option>Winter</option><option>Spring</option><option>Summer</option><option>Autumn</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Price (₹)</label><input type="number" id="f1-price" class="input" value="50" /></div>
+        <div class="field"><label>Discount (%)</label><input type="number" id="f1-discount" class="input" value="10" /></div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-lg btn-full mt-24" onclick="runForecast1m()" id="f1-btn">Generate 1-Month Forecast</button>
+  </div>
+  <div class="card">
+    <div class="card-title mb-16">Forecast Result</div>
+    <div id="f1-empty" class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">Set parameters and run</div></div>
+    <div id="f1-loading" style="display:none;" class="empty-state"><div class="empty-state-title">Forecasting...</div></div>
+    <div id="f1-output" style="display:none;"></div>
+    <div id="f1-error" style="display:none;" class="mt-16"></div>
+  </div>
+</div>
+<script>
+async function runForecast1m() {
+  const btn = document.getElementById('f1-btn');
+  btn.disabled = true; btn.textContent = 'Forecasting...';
+  document.getElementById('f1-empty').style.display='none';
+  document.getElementById('f1-output').style.display='none';
+  document.getElementById('f1-error').style.display='none';
+  document.getElementById('f1-loading').style.display='block';
+  const payload = {
+    category: document.getElementById('f1-category').value,
+    region: document.getElementById('f1-region').value,
+    weather: document.getElementById('f1-weather').value,
+    seasonality: document.getElementById('f1-seasonality').value,
+    price: parseFloat(document.getElementById('f1-price').value),
+    discount: parseFloat(document.getElementById('f1-discount').value),
+    months: 1
+  };
+  try {
+    const res = await fetch('/api/forecast', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data = await res.json();
+    if (data.success && data.forecasts.length > 0) {
+      const f = data.forecasts[0];
+      document.getElementById('f1-output').innerHTML = `
+        <div class="result-hero">
+          <div class="result-value">${f.prediction}</div>
+          <div class="result-unit">units forecast for ${f.month}</div>
+          <div class="result-range">Range: ${f.confidence_low} – ${f.confidence_high} units</div>
+          <div class="confidence-bar mt-16"><div class="confidence-fill" style="width:${Math.min(100,(f.prediction/500)*100)}%"></div></div>
+        </div>
+        <div class="alert alert-success mt-16" style="font-size:12px;">✓ Logged to MySQL prediction_logs</div>`;
+      document.getElementById('f1-output').style.display='block';
+      showToast('1-Month forecast saved to MySQL','success');
+    } else {
+      const err = document.getElementById('f1-error');
+      err.className='alert alert-error'; err.textContent=data.error||'Forecast failed.'; err.style.display='block';
+    }
+  } catch(e) {
+    const err = document.getElementById('f1-error');
+    err.className='alert alert-error'; err.textContent='Server error.'; err.style.display='block';
+  } finally {
+    document.getElementById('f1-loading').style.display='none';
+    btn.disabled=false; btn.textContent='Generate 1-Month Forecast';
+  }
+}
+</script>
+{% endblock %}

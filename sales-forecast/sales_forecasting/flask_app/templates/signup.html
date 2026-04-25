@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RetailIQ — Create Account</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+<div class="landing-wrapper">
+  <div class="landing-card">
+    <div class="landing-logo">
+      <div class="landing-logo-icon">📊</div>
+      <div class="landing-logo-text">Retail<span>IQ</span></div>
+    </div>
+    <h1 class="landing-title">Create account</h1>
+    <p class="landing-sub">Get started with AI-powered retail forecasting</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <ul class="flash-list">
+        {% for cat, msg in messages %}
+        <li class="flash-msg {{ cat }}">{{ msg }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    {% endwith %}
+    <form method="POST" action="{{ url_for('auth.signup') }}" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="form-row">
+        <div class="field">
+          <label>First Name</label>
+          <input type="text" name="first_name" class="input" placeholder="First" required />
+        </div>
+        <div class="field">
+          <label>Last Name</label>
+          <input type="text" name="last_name" class="input" placeholder="Last" required />
+        </div>
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" name="email" class="input" placeholder="you@example.com" required />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" class="input" placeholder="Min. 8 characters" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top:6px;">Create Account</button>
+    </form>
+    <div class="landing-footer">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></div>
+  </div>
+</div>
+</body>
+</html>

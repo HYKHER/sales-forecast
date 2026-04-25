@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}API Developer Docs{% endblock %}
+
+{% block content %}
+<header class="dash-header">
+  <h1>RetailIQ <span class="gradient-text">Developers API</span></h1>
+  <p>Integrate our XGBoost ensemble into your own enterprise applications seamlessly.</p>
+</header>
+
+<main class="bento-grid" style="display:grid; grid-template-columns:1fr; gap:32px;">
+  
+  <section class="bento-card">
+    <div class="card-header">
+      <h2><span class="badge" style="margin-right:10px;">GET</span> /api/health</h2>
+    </div>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:16px;">Check if the server and predictive model are alive and ready.</p>
+    <div style="background: rgba(0,0,0,0.5); padding: 16px; border-radius:12px; font-family:monospace; color:var(--cyan); border: 1px solid var(--glass-border);">
+      curl http://127.0.0.1:5000/api/health
+    </div>
+  </section>
+
+  <section class="bento-card">
+    <div class="card-header">
+      <h2><span class="badge badge-magenta" style="margin-right:10px;">POST</span> /api/predict</h2>
+    </div>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:16px;">Supply JSON store constraints to receive an immediate deterministic demand output.</p>
+    
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:300px;">
+        <h4 style="margin-bottom:12px; color:var(--text-main); font-family:var(--head-font);">Request Body payload:</h4>
+        <div style="background: rgba(0,0,0,0.5); padding: 16px; border-radius:12px; font-family:monospace; color:var(--text-muted); border: 1px solid var(--glass-border); line-height:1.8; font-size:13px;">
+          {<br/>
+          &nbsp;&nbsp;"category": "Electronics",<br/>
+          &nbsp;&nbsp;"region": "North",<br/>
+          &nbsp;&nbsp;"weather": "Sunny",<br/>
+          &nbsp;&nbsp;"seasonality": "Summer",<br/>
+          &nbsp;&nbsp;"price": 75.0,<br/>
+          &nbsp;&nbsp;"discount": 15,<br/>
+          &nbsp;&nbsp;"inventory_level": 350,<br/>
+          &nbsp;&nbsp;"holiday_promotion": 1<br/>
+          }
+        </div>
+      </div>
+
+      <div style="flex:1; min-width:300px;">
+        <h4 style="margin-bottom:12px; color:var(--text-main); font-family:var(--head-font);">Response output:</h4>
+        <div style="background: rgba(0,0,0,0.5); padding: 16px; border-radius:12px; font-family:monospace; color:var(--text-muted); border: 1px solid var(--glass-border); line-height:1.8; font-size:13px;">
+          {<br/>
+          &nbsp;&nbsp;"success": true,<br/>
+          &nbsp;&nbsp;"prediction": 147.3,<br/>
+          &nbsp;&nbsp;"confidence_low": 78.5,<br/>
+          &nbsp;&nbsp;"confidence_high": 216.1,<br/>
+          &nbsp;&nbsp;"remaining_today": 99<br/>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}

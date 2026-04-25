@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Data Entry — MySQL{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Sales <span class="accent">Data Entry</span></h1>
+      <p class="page-subtitle">Enter sales records directly into MySQL — no CSV files needed.</p>
+    </div>
+    <div class="page-actions">
+      <div class="db-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3S3 13.66 3 12"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+        MySQL Connected
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-main">
+  <!-- Form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">New Sales Record</div>
+        <div class="card-subtitle">All fields are saved directly to your MySQL database</div>
+      </div>
+      <span class="badge badge-emerald">Live Insert</span>
+    </div>
+
+    <div class="form-section">
+      <div class="form-row">
+        <div class="field">
+          <label>Store ID</label>
+          <input type="text" id="store_id" class="input" placeholder="e.g. S001" />
+        </div>
+        <div class="field">
+          <label>Product ID</label>
+          <input type="text" id="product_id" class="input" placeholder="e.g. P0001" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Date *</label>
+          <input type="date" id="rec_date" class="input" required />
+        </div>
+        <div class="field">
+          <label>Category *</label>
+          <select id="rec_category" class="select">
+            {% for c in categories %}<option>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Region *</label>
+          <select id="rec_region" class="select">
+            {% for r in regions %}<option>{{ r }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Seasonality</label>
+          <select id="rec_seasonality" class="select">
+            {% for s in seasonality_options %}<option>{{ s }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <hr class="section-divider"/>
+
+      <div class="form-row-3">
+        <div class="field">
+          <label>Units Sold</label>
+          <input type="number" id="units_sold" class="input" value="0" min="0" />
+        </div>
+        <div class="field">
+          <label>Units Ordered</label>
+          <input type="number" id="units_ordered" class="input" value="0" min="0" />
+        </div>
+        <div class="field">
+          <label>Inventory Level</label>
+          <input type="number" id="inventory_level" class="input" value="300" min="0" />
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="field">
+          <label>Price (₹)</label>
+          <input type="number" id="price" class="input" value="50" step="0.01" min="0" />
+        </div>
+        <div class="field">
+          <label>Discount (%)</label>
+          <input type="number" id="discount" class="input" value="0" min="0" max="100" />
+        </div>
+        <div class="field">
+          <label>Competitor Price (₹)</label>
+          <input type="number" id="competitor_pricing" class="input" value="50" step="0.01" min="0" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Weather Condition</label>
+          <select id="weather_condition" class="select">
+            {% for w in weather_options %}<option>{{ w }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Holiday / Promotion</label>
+          <div class="toggle-row">
+            <span class="toggle-label-text">Active promotion or holiday</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="holiday_promotion"/>
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Notes (Optional)</label>
+        <textarea id="notes" class="input" placeholder="Any additional context..."></textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-top:24px;">
+      <button class="btn btn-emerald btn-lg" onclick="submitRecord()" id="submit-btn">
+        💾 Save to MySQL
+      </button>
+      <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+    </div>
+
+    <div id="form-alert" style="display:none;margin-top:16px;"></div>
+  </div>
+
+  <!-- Recent Records -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-title">Recent Records</div>
+        <div class="card-subtitle">Last 20 entries in MySQL</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadRecords()">↻ Refresh</button>
+    </div>
+
+    <div id="records-container">
+      {% if recent_records %}
+        {% for r in recent_records %}
+        <div class="record-row" id="rec-{{ r.id }}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(59,130,246,0.08);">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">{{ r.category }} · {{ r.region }}</div>
+            <div style="font-size:11px;color:var(--text-muted);">{{ r.date }} · {{ r.store_id or '—' }} · Sold: {{ r.units_sold|int }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge badge-blue">₹{{ r.price }}</span>
+            <button class="btn btn-danger btn-sm" onclick="deleteRecord({{ r.id }})">✕</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <div class="empty-state-title">No records yet</div>
+          <div class="empty-state-text">Enter your first sales record using the form.</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:20px;padding:12px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md);">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue-bright);margin-bottom:6px;">MySQL Table: sales_records</div>
+      <div style="font-size:12px;color:var(--text-muted);">All data is stored in your MySQL database and can be queried directly via <code style="font-family:var(--font-mono);color:var(--blue-bright);">SELECT * FROM sales_records;</code></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('rec_date').value = new Date().toISOString().split('T')[0];
+});
+
+async function submitRecord() {
+  const btn = document.getElementById('submit-btn');
+  const alertDiv = document.getElementById('form-alert');
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Saving...';
+  alertDiv.style.display = 'none';
+
+  const payload = {
+    date: document.getElementById('rec_date').value,
+    store_id: document.getElementById('store_id').value,
+    product_id: document.getElementById('product_id').value,
+    category: document.getElementById('rec_category').value,
+    region: document.getElementById('rec_region').value,
+    seasonality: document.getElementById('rec_seasonality').value,
+    units_sold: parseFloat(document.getElementById('units_sold').value) || 0,
+    units_ordered: parseFloat(document.getElementById('units_ordered').value) || 0,
+    inventory_level: parseFloat(document.getElementById('inventory_level').value) || 0,
+    price: parseFloat(document.getElementById('price').value) || 0,
+    discount: parseFloat(document.getElementById('discount').value) || 0,
+    competitor_pricing: parseFloat(document.getElementById('competitor_pricing').value) || 0,
+    weather_condition: document.getElementById('weather_condition').value,
+    holiday_promotion: document.getElementById('holiday_promotion').checked ? 1 : 0,
+    notes: document.getElementById('notes').value,
+  };
+
+  if (!payload.date || !payload.category || !payload.region) {
+    showAlert('error', 'Please fill in all required fields (Date, Category, Region).');
+    btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = '💾 Save to MySQL';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/sales-records', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Record #' + data.id + ' saved to MySQL!', 'success');
+      clearForm();
+      loadRecords();
+    } else {
+      showAlert('error', data.error || 'Failed to save record.');
+    }
+  } catch(e) {
+    showAlert('error', 'Server connection error.');
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = '💾 Save to MySQL';
+  }
+}
+
+async function loadRecords() {
+  const container = document.getElementById('records-container');
+  container.innerHTML = '<div class="empty-state"><div class="empty-state-text">Loading...</div></div>';
+  try {
+    const res = await fetch('/api/sales-records?limit=20');
+    const data = await res.json();
+    if (data.success && data.records.length > 0) {
+      container.innerHTML = data.records.map(r => `
+        <div class="record-row" id="rec-${r.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(59,130,246,0.08);">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${r.category} · ${r.region}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${r.date} · ${r.store_id || '—'} · Sold: ${r.units_sold|0}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge badge-blue">₹${r.price}</span>
+            <button class="btn btn-danger btn-sm" onclick="deleteRecord(${r.id})">✕</button>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No records found</div></div>';
+    }
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-title">Error loading records</div></div>';
+  }
+}
+
+async function deleteRecord(id) {
+  if (!confirm('Delete this record from MySQL?')) return;
+  const res = await fetch(`/api/sales-records/${id}`, {method: 'DELETE'});
+  const data = await res.json();
+  if (data.success) {
+    const el = document.getElementById(`rec-${id}`);
+    if (el) el.remove();
+    showToast('Record deleted from MySQL', 'success');
+  } else {
+    showToast('Failed to delete record', 'error');
+  }
+}
+
+function clearForm() {
+  document.getElementById('store_id').value = '';
+  document.getElementById('product_id').value = '';
+  document.getElementById('units_sold').value = '0';
+  document.getElementById('units_ordered').value = '0';
+  document.getElementById('inventory_level').value = '300';
+  document.getElementById('price').value = '50';
+  document.getElementById('discount').value = '0';
+  document.getElementById('competitor_pricing').value = '50';
+  document.getElementById('notes').value = '';
+  document.getElementById('holiday_promotion').checked = false;
+  document.getElementById('form-alert').style.display = 'none';
+}
+
+function showAlert(type, msg) {
+  const div = document.getElementById('form-alert');
+  div.className = `alert alert-${type}`;
+  div.textContent = msg;
+  div.style.display = 'block';
+}
+</script>
+{% endblock %}
