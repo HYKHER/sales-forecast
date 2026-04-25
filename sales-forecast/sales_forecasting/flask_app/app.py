@@ -1,5 +1,5 @@
 """
-RetailIQ — Sales Forecasting Flask API (MySQL Edition)
+RetailIQ — Sales Forecasting Flask API (PostgreSQL Edition)
 """
 
 import os
@@ -14,23 +14,20 @@ from flask_login import LoginManager, login_required, current_user
 from models import db, User, PredictionLog, SalesRecord
 app = Flask(__name__)
 
-MYSQL_HOST     = os.environ.get('MYSQL_HOST',     'localhost')
-MYSQL_PORT     = os.environ.get('MYSQL_PORT',     '3306')
-MYSQL_USER     = os.environ.get('MYSQL_USER',     'root')
-MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'nezuko2405')
-MYSQL_DB       = os.environ.get('MYSQL_DB',       'retailiq')
+# PostgreSQL via DATABASE_URL (Neon / Render / Railway)
+# Falls back to local SQLite for development if DATABASE_URL is not set
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///retailiq_dev.db')
 
-MYSQL_URI = (
-    f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}"
-    f"@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DB}?charset=utf8mb4"
-)
+# Render gives postgres:// but SQLAlchemy needs postgresql://
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
 app.config['SECRET_KEY']                  = os.environ.get('SECRET_KEY', 'retailiq-dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI']     = os.environ.get('DATABASE_URL', MYSQL_URI)
+app.config['SQLALCHEMY_DATABASE_URI']     = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS']   = {
     'pool_recycle': 280, 'pool_pre_ping': True,
-    'pool_size': 10, 'max_overflow': 20,
+    'pool_size': 5, 'max_overflow': 10,
 }
 
 db.init_app(app)
@@ -346,7 +343,7 @@ def add_sales_record():
         )
         db.session.add(record)
         db.session.commit()
-        return jsonify({'success': True, 'id': record.id, 'message': 'Record saved to MySQL'})
+        return jsonify({'success': True, 'id': record.id, 'message': 'Record saved successfully'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -384,7 +381,7 @@ def health():
     try:
         db.session.execute(db.text('SELECT 1')); db_status = 'connected'
     except: db_status = 'error'
-    return jsonify({'status': 'ok', 'database': db_status, 'db_type': 'MySQL', 'model': 'Linear Regression', 'features': len(feature_list)})
+    return jsonify({'status': 'ok', 'database': db_status, 'db_type': 'PostgreSQL', 'model': 'Linear Regression', 'features': len(feature_list)})
 
 @app.route('/api/dashboard-stats', methods=['GET'])
 @login_required
@@ -416,8 +413,8 @@ def dashboard_stats():
 
 with app.app_context():
     db.create_all()
-    print("✅ MySQL tables ready.")
+    print("✅ PostgreSQL tables ready.")
 
 if __name__ == '__main__':
-    print("\n" + "="*50 + "\n  RetailIQ — MySQL Edition\n  Open: http://127.0.0.1:5000\n" + "="*50 + "\n")
+    print("\n" + "="*50 + "\n  RetailIQ — PostgreSQL Edition\n  Open: http://127.0.0.1:5000\n" + "="*50 + "\n")
     app.run(debug=True, port=5000)

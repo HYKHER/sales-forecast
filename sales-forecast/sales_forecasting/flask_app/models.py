@@ -1,5 +1,5 @@
 """
-RetailIQ — Database Models (MySQL Edition)
+RetailIQ — Database Models (PostgreSQL Edition)
 Includes SalesRecord for direct data entry.
 """
 
